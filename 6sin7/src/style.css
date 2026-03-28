@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* 强制引入 Element Plus 样式 */
+@import "element-plus/dist/index.css";
+
+@theme {
+  /* 这里的配置可以留空，或者自定义颜色 */
+}
+
+/* 核心修复：防止 Tailwind 重置掉 Element 的按钮背景 */
+@layer base {
+
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    background-color: transparent;
+    /* 先给个底 */
+  }
+
+  /* 强制还原 Element Plus 按钮的显示核心 */
+  .el-button {
+    display: inline-flex !important;
+    background-color: var(--el-button-bg-color) !important;
+    border: 1px solid var(--el-button-border-color) !important;
+    color: var(--el-button-text-color) !important;
+    padding: 12px 20px !important;
+    /* 强制给个高度 */
+  }
+
+  .el-button--primary {
+    --el-button-bg-color: #409eff !important;
+    --el-button-border-color: #409eff !important;
+    --el-button-text-color: #ffffff !important;
+  }
+}
