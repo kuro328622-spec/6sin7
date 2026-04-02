@@ -12,6 +12,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Lab',
     // 对应你目录里的 views/Lab.vue
     component: () => import('../views/Lab.vue')
+  },
+  {
+    path: '/manual-sort',
+    name: 'ManualSort',
+    // 对应你目录里的 views/ManualSort.vue
+    component: () => import('../views/ManualSort.vue')
   }
 ]
 

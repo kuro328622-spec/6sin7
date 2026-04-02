@@ -12,8 +12,12 @@ const handleEnterLab = () => {
   router.push('/lab')
 }
 
+const handleManualSort = () => {
+  router.push('/manual-sort')
+}
+
 const openDocs = () => {
-  window.open('https://element-plus.org/', '_blank')
+  window.open('https://element-plus.org/', '_blank' )
 }
 </script>
 
@@ -26,13 +30,18 @@ const openDocs = () => {
       </h1>
       
       <p class="text-slate-400 mb-8 leading-relaxed">
-        工程化环境：<span class="text-emerald-400 font-mono">Vite + Vue 3 + Tailwind v4</span> 已就绪。<br/>
+        工程化环境：<span class="text-emerald-400 font-mono">Vite + Vue 3 + Tailwind v4</span> 已就绪。  
+
         代码规范已由 <span class="text-orange-400 font-mono">Husky</span> 守卫。
       </p>
 
-      <div class="flex justify-center gap-4">
+      <div class="flex justify-center gap-4 flex-wrap">
         <el-button type="primary" size="large" round @click="handleEnterLab">
           进入实验场
+        </el-button>
+        
+        <el-button type="success" size="large" round @click="handleManualSort">
+          手动排序
         </el-button>
         
         <el-button type="info" size="large" round plain @click="openDocs">

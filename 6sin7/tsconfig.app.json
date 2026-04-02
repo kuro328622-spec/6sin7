@@ -3,6 +3,13 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
+    
+    /* 路径映射配置 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@6sin7/markdown-engine": ["packages/markdown-engine/src/index.ts"]
+    },
 
     /* Linting */
     "strict": true,
