@@ -7,7 +7,7 @@
   /* 这里的配置可以留空，或者自定义颜色 */
 }
 
-/* 核心修复：防止 Tailwind 重置掉 Element 的按钮背景 */
+/* 基础重置 */
 @layer base {
 
   button,
@@ -15,17 +15,14 @@
   [type='reset'],
   [type='submit'] {
     background-color: transparent;
-    /* 先给个底 */
   }
 
-  /* 强制还原 Element Plus 按钮的显示核心 */
   .el-button {
     display: inline-flex !important;
     background-color: var(--el-button-bg-color) !important;
     border: 1px solid var(--el-button-border-color) !important;
     color: var(--el-button-text-color) !important;
     padding: 12px 20px !important;
-    /* 强制给个高度 */
   }
 
   .el-button--primary {
@@ -33,4 +30,146 @@
     --el-button-border-color: #409eff !important;
     --el-button-text-color: #ffffff !important;
   }
+}
+
+/* ============================================================
+   【全屏多色渐变 - 复古游戏像素风】 核心样式
+   ============================================================ */
+
+/* 引入像素字体 */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+/* 像素风全局激活类 */
+.is-pixel-art {
+  font-family: 'Press Start 2P', cursive, "Courier New", Courier, monospace !important;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+
+  /* 自定义像素鼠标指针 */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23fff' stroke='%23000' stroke-width='1' d='M10 2h4v2h2v2h2v2h2v2h2v12h-2v2h-2v2h-10v-2h-2v-2h-2v-12h2v-2h2v-2h2V2z'/%3E%3Cpath fill='%23000' d='M12 4h2v2h-2zM14 6h2v2h-2zM16 8h2v2h-2zM18 10h2v2h-2z'/%3E%3C/svg%3E"), auto !important;
+
+  /* 核心：全屏多色渐变融合背景 */
+  background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%) !important;
+  color: #2c3e50 !important;
+}
+
+/* 像素模式下的全屏强制覆盖 - 确保大背景彻底变换 */
+.is-pixel-art body,
+.is-pixel-art #app,
+.is-pixel-art .min-h-screen {
+  background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%) !important;
+  /* 奶油融合渐变 */
+  background-attachment: fixed !important;
+}
+
+/* 强制所有元素在像素模式下取消圆角 */
+.is-pixel-art * {
+  border-radius: 0 !important;
+  transition: none !important;
+}
+
+/* 像素风按钮 - 使用更鲜艳的配色 */
+.is-pixel-art .el-button {
+  position: relative;
+  border: 4px solid #000 !important;
+  background-color: #ffffff !important;
+  color: #000 !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  margin: 4px;
+}
+
+/* 亮红色主按钮 */
+.is-pixel-art .el-button--primary {
+  background: linear-gradient(to bottom, #ff5252, #ff7979) !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+  color: #fff !important;
+}
+
+/* 亮蓝色/成功按钮 */
+.is-pixel-art .el-button--success {
+  background: linear-gradient(to bottom, #33d9b2, #218c74) !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+  color: #fff !important;
+}
+
+/* 亮黄色/信息按钮 */
+.is-pixel-art .el-button--info {
+  background: linear-gradient(to bottom, #ffb142, #cc8e35) !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+  color: #000 !important;
+}
+
+.is-pixel-art .el-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px 0px #000 !important;
+}
+
+/* 像素风卡片容器 - 深度重绘 */
+.is-pixel-art .bg-slate-800 {
+  background-color: #ffffff !important;
+  border: 8px solid #000 !important;
+  /* 使用双重硬阴影：一个颜色，一个黑色 */
+  box-shadow: 12px 12px 0px 0px #ffb142, 20px 20px 0px 0px rgba(0, 0, 0, 0.1) !important;
+  padding: 2rem !important;
+}
+
+/* 标题 - 炫彩像素文字 */
+.is-pixel-art h1 {
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #ff5252 !important;
+  text-shadow: 4px 4px 0px #ffb142, 8px 8px 0px #33d9b2;
+  /* 多重硬阴影 */
+  letter-spacing: -2px;
+}
+
+/* 段落文字颜色纠正 */
+.is-pixel-art p,
+.is-pixel-art span,
+.is-pixel-art .text-slate-400,
+.is-pixel-art .text-slate-500 {
+  color: #2c3e50 !important;
+}
+
+/* 强调文字 */
+.is-pixel-art .text-emerald-400,
+.is-pixel-art .text-orange-400 {
+  color: #ff5252 !important;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* 像素化滚动条 */
+.is-pixel-art ::-webkit-scrollbar {
+  width: 16px;
+}
+
+.is-pixel-art ::-webkit-scrollbar-track {
+  background: #f7f1e3;
+}
+
+.is-pixel-art ::-webkit-scrollbar-thumb {
+  background: #ff5252;
+  border: 4px solid #000;
+}
+
+/* 背景装饰：像素波点融合 */
+.is-pixel-art::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(#ffb142 2px, transparent 2px),
+    radial-gradient(#33d9b2 2px, transparent 2px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
 }

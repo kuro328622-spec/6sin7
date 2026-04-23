@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import confetti from 'canvas-confetti'
 
 interface Bar {
   id: number
@@ -16,8 +17,30 @@ const draggedId = ref<number | null>(null)
 const dragStartX = ref(0)
 const audioContext = ref<AudioContext | null>(null)
 const containerRect = ref<DOMRect | null>(null)
+const wasSorted = ref(false) // 用于追踪上一次的排序状态
 
 const maxBarValue = computed(() => Math.max(...bars.value.map(b => b.value), 1))
+
+// 检测排序是否完成（从小到大）
+const isSorted = computed(() => {
+  if (bars.value.length === 0) return false
+  return bars.value.every((bar, index) => {
+    if (index === 0) return true
+    return bar.value >= bars.value[index - 1].value
+  })
+})
+
+// 监听排序完成状态
+watch(isSorted, (newVal) => {
+  if (newVal && !wasSorted.value) {
+    // 从未排序 -> 已排序：触发彩带和音效
+    triggerConfettiWithSound()
+    wasSorted.value = true
+  } else if (!newVal && wasSorted.value) {
+    // 从已排序 -> 未排序：重置状态
+    wasSorted.value = false
+  }
+})
 
 const initializeAudio = () => {
   if (!audioContext.value) {
@@ -29,7 +52,6 @@ const initializeAudio = () => {
 const generateUniqueRandomNumbers = (count: number, min: number, max: number): number[] => {
   const range = max - min + 1
   
-  // 如果需要的数字个数超过范围，则返回所有可能的数字
   if (count >= range) {
     return Array.from({ length: range }, (_, i) => min + i).sort(() => Math.random() - 0.5)
   }
@@ -56,6 +78,7 @@ const generateBars = () => {
     isDragging: false,
     offsetX: 0
   }))
+  wasSorted.value = isSorted.value // 初始化时检查是否已排序
 }
 
 const resetBars = () => generateBars()
@@ -75,6 +98,40 @@ const playSound = (frequency: number, duration: number = 0.1) => {
   gain.gain.exponentialRampToValueAtTime(0.01, now + duration)
   osc.start(now)
   osc.stop(now + duration)
+}
+
+// 像素风彩带效果函数
+const triggerConfetti = () => {
+  const count = 200
+  const defaults = {
+    origin: { y: 0.7 },
+    shapes: ['square'], // 使用方形，更符合像素风
+    colors: ['#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa']
+  }
+
+  function fire(particleRatio: number, opts: any) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio)
+    })
+  }
+
+  fire(0.25, { spread: 26, startVelocity: 55 })
+  fire(0.2, { spread: 60 })
+  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
+  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
+  fire(0.1, { spread: 120, startVelocity: 45 })
+}
+
+// 彩带 + 音效联动
+const triggerConfettiWithSound = () => {
+  // 播放胜利音效
+  playSound(523.25, 0.2) // C5
+  setTimeout(() => playSound(659.25, 0.2), 150) // E5
+  setTimeout(() => playSound(783.99, 0.4), 300) // G5
+  
+  triggerConfetti()
 }
 
 const handleMouseDown = (barId: number, event: MouseEvent) => {
@@ -100,11 +157,9 @@ const handleMouseMove = (event: MouseEvent) => {
   const bar = bars.value.find(b => b.id === draggedId.value)
   if (!bar) return
   
-  // 计算鼠标移动的距离
   const deltaX = event.clientX - dragStartX.value
   bar.offsetX = deltaX
   
-  // 随机播放拖拽音效
   if (Math.random() > 0.95) playSound(200, 0.05)
 }
 
@@ -114,33 +169,21 @@ const handleMouseUp = () => {
   const bar = bars.value.find(b => b.id === draggedId.value)
   if (!bar || !containerRect.value) return
   
-  // 计算柱体宽度（包括间隙）
-  const totalGap = (barCount.value - 1) * 8 // 间隙为 gap-2 = 8px
-  const availableWidth = containerRect.value.width - 32 // 减去 padding (p-4 = 16px * 2)
+  const totalGap = (barCount.value - 1) * 8
+  const availableWidth = containerRect.value.width - 32
   const barWidth = (availableWidth - totalGap) / barCount.value
   
-  // 获取当前拖拽柱体的索引
   const draggedIndex = bars.value.findIndex(b => b.id === draggedId.value)
-  
-  // 计算目标位置（基于鼠标偏移）
   const targetPosition = draggedIndex * (barWidth + 8) + bar.offsetX
   const targetIndex = Math.round(targetPosition / (barWidth + 8))
-  
-  // 确保目标索引在有效范围内
   const validTargetIndex = Math.max(0, Math.min(targetIndex, barCount.value - 1))
   
-  // 如果目标位置不同，执行插入操作
   if (validTargetIndex !== draggedIndex) {
-    // 移除当前柱体
     const draggedBar = bars.value.splice(draggedIndex, 1)[0]
-    
-    // 在新位置插入
     bars.value.splice(validTargetIndex, 0, draggedBar)
-    
     playSound(400, 0.1)
   }
   
-  // 重置拖拽状态
   bar.isDragging = false
   bar.offsetX = 0
   draggedId.value = null
@@ -285,7 +328,7 @@ const updateRange = () => {
                         height: `${(bar.value / maxBarValue) * 100}%`,
                         backgroundColor: bar.isDragging
                           ? 'rgb(59, 130, 246)' // 拖拽时为蓝色
-                          : 'rgb(34, 197, 94)', // 默认为绿色
+                          : isSorted ? 'rgb(16, 185, 129)' : 'rgb(34, 197, 94)', // 排序完成时颜色微调
                         boxShadow: bar.isDragging
                           ? '0 0 20px rgba(59, 130, 246, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.2)'
                           : '0 4px 12px rgba(0, 0, 0, 0.3)',
@@ -336,6 +379,17 @@ const updateRange = () => {
                 <p class="text-sm font-bold text-purple-400">{{ minValue }} - {{ maxValue }}</p>
               </div>
             </div>
+
+            <!-- 排序完成提示 -->
+            <transition name="fade">
+              <div v-if="isSorted" class="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/50 rounded-xl flex items-center justify-center gap-3 animate-pulse">
+                <span class="text-2xl">🎉</span>
+                <p class="text-emerald-400 font-bold tracking-wide">
+                  恭喜！排序已完美完成
+                </p>
+                <span class="text-2xl">🎉</span>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
@@ -374,6 +428,17 @@ const updateRange = () => {
 /* transition-group 动画 */
 .bar-move {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 渐变动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* 响应式调整 */

@@ -2,12 +2,26 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "node",
+    /* 1. 现代构建工具的最佳实践 */
+    "moduleResolution": "bundler", 
     "strict": true,
+    
+    /* 2. 类型定义配置：支持 npm 发布 */
     "declaration": true,
+    "declarationMap": true, // 建议开启，方便用户在 IDE 中直接跳转到源码
+    
+    /* 3. 输出目录优化 */
     "outDir": "./dist",
+    "rootDir": "src", // 明确指定 src 为源码根目录，保持 dist 结构纯净
+    
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    
+    /* 4. 强制文件名大小写一致，避免 Linux/Windows 环境差异报错 */
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
