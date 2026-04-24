@@ -3,45 +3,64 @@ import { Token } from './token';
 
 export class Renderer {
   /**
-   * 行内解析：处理粗体、斜体、代码、链接
+   * 行内解析：处理删除线、粗体、斜体、代码、链接、行内图片
    */
-// 找到 parseInline 方法，修改链接正则
-private parseInline(text: string): string {
-  return text
-    // 1. 解析粗体
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white px-0.5">$1</strong>')
-    // 2. 解析斜体
-    .replace(/\*(.*?)\*/g, '<em class="italic text-slate-200 px-0.5">$1</em>')
-    // 3. 解析行内代码
-    .replace(/`(.*?)`/g, '<code class="bg-slate-700 px-1 rounded text-pink-400 font-mono text-sm">$1</code>')
-    // 4. 【核心修复】：解析链接，并强行对 URL ($2) 进行 trim()
-    .replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
-      const cleanUrl = url.trim(); // 彻底干掉 URL 末尾的任何空格
-      return `<a href="${cleanUrl}" target="_blank" class="text-sky-400 underline decoration-sky-400/30 hover:text-sky-300 transition-colors">${text}</a>`;
-    });
-}
+  private parseInline(text: string): string {
+    return text
+      // 1. 解析删除线（必须最先，避免被 * 规则干扰）
+      .replace(/~~(.*?)~~/g, '<del style="text-decoration:line-through;color:var(--md-muted)">$1</del>')
+      // 2. 解析粗体
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:var(--md-strong)">$1</strong>')
+      // 3. 解析斜体
+      .replace(/\*(.*?)\*/g, '<em style="font-style:italic;color:var(--md-em)">$1</em>')
+      // 4. 解析行内代码
+      .replace(/`(.*?)`/g, '<code style="background:var(--md-code-bg);color:var(--md-code-text);padding:0 4px;border-radius:4px;font-family:monospace;font-size:0.875em">$1</code>')
+      // 5. 解析行内图片（段落内的图片）
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
+        return `<img src="${url.trim()}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:4px 0">`
+      })
+      // 6. 解析链接
+      .replace(/\[(.*?)\]\((.*?)\)/g, (_, linkText, url) => {
+        const cleanUrl = url.trim();
+        return `<a href="${cleanUrl}" target="_blank" style="color:var(--md-link);text-decoration:underline">${linkText}</a>`;
+      });
+  }
+
   /**
    * 渲染主函数：将 AST 树转换为 HTML 字符串
-   * 【核心】：通过递归处理 children 实现无限嵌套支持
    */
   render(tokens: Token[]): string {
     let html = '';
     for (const token of tokens) {
-      // 1. 处理行内文本节点
+      // 1. 行内文本节点
       if (token.type === 'inline') {
-        html += this.parseInline(token.content);
+        if (token.markup === 'code_block') {
+          // 代码块内容直接输出，不经过 parseInline
+          html += token.content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+        } else {
+          html += this.parseInline(token.content)
+        }
         continue;
       }
 
-      // 2. 渲染块级元素的开始标签
+      // 2. 自闭合块级元素（无子节点）
+      if (token.nesting === 0) {
+        html += this.renderSelfClosing(token);
+        continue;
+      }
+
+      // 3. 渲染开始标签
       html += this.renderOpenTag(token);
 
-      // 3. 【递归】：如果有子节点，深入渲染子节点
+      // 4. 递归渲染子节点
       if (token.children && token.children.length > 0) {
         html += this.render(token.children);
       }
 
-      // 4. 渲染结束标签（仅针对有 nesting=1 的节点）
+      // 5. 渲染结束标签
       if (token.nesting === 1) {
         html += this.renderCloseTag(token);
       }
@@ -49,32 +68,74 @@ private parseInline(text: string): string {
     return html;
   }
 
+  private renderSelfClosing(token: Token): string {
+    switch (token.type) {
+      case 'hr':
+        return `<hr style="border-color:var(--md-border);margin:2rem 0">`
+
+      case 'image':
+        return `<img src="${token.markup}" alt="${token.content}" style="max-width:100%;border-radius:6px;margin:1rem 0;display:block">`
+
+      case 'table': {
+        const { headers, rows } = JSON.parse(token.content) as {
+          headers: string[]
+          rows: string[][]
+        }
+        const thCells = headers
+          .map(h => `<th style="padding:8px 12px;border:1px solid var(--md-border);background:var(--md-quote-bg);color:var(--md-heading);font-weight:700;text-align:left">${this.parseInline(h)}</th>`)
+          .join('')
+        const bodyRows = rows
+          .map(row => {
+            const tds = row
+              .map(cell => `<td style="padding:8px 12px;border:1px solid var(--md-border);color:var(--md-text)">${this.parseInline(cell)}</td>`)
+              .join('')
+            return `<tr>${tds}</tr>`
+          })
+          .join('')
+        return `<table style="border-collapse:collapse;width:100%;margin:1rem 0">
+  <thead><tr>${thCells}</tr></thead>
+  <tbody>${bodyRows}</tbody>
+</table>`
+      }
+
+      default:
+        return ''
+    }
+  }
+
   private renderOpenTag(token: Token): string {
     switch (token.type) {
-      case 'heading_open':
-        const colorClass = 
-          token.tag === 'h1' ? 'text-sky-400 text-3xl' : 
-          token.tag === 'h2' ? 'text-emerald-400 text-2xl' : 'text-violet-400 text-xl';
-        return `<${token.tag} class="font-black my-4 ${colorClass}">`;
-      
+      case 'heading_open': {
+        const size =
+          token.tag === 'h1' ? '1.875rem' :
+          token.tag === 'h2' ? '1.5rem' : '1.25rem'
+        return `<${token.tag} style="font-weight:900;margin:1rem 0;font-size:${size};color:var(--md-heading)">`
+      }
+
       case 'paragraph_open':
-        return `<p class="text-slate-300 mb-4 leading-relaxed">`;
-      
+        return `<p style="color:var(--md-text);margin-bottom:1rem;line-height:1.75">`
+
       case 'list_item_open':
-        return `<li class="list-disc list-inside text-slate-300 ml-6 mb-2">`;
-      
+        if (token.markup === 'ordered') {
+          return `<li style="color:var(--md-text);margin-left:1.5rem;margin-bottom:0.5rem;list-style-type:decimal">`
+        }
+        return `<li style="color:var(--md-text);margin-left:1.5rem;margin-bottom:0.5rem;list-style-type:disc">`
+
       case 'blockquote_open':
-        return `<blockquote class="border-l-4 border-slate-500 bg-slate-800/50 py-2 px-4 my-4 italic text-slate-400">`;
-      
-      case 'hr':
-        return `<hr class="border-slate-700 my-8">`;
-      
+        return `<blockquote style="border-left:4px solid var(--md-border);background:var(--md-quote-bg);padding:0.5rem 1rem;margin:1rem 0;font-style:italic;color:var(--md-muted)">`
+
+      case 'code_block_open':
+        return `<pre style="background:var(--md-code-bg);border-radius:8px;padding:1rem;margin:1rem 0;overflow-x:auto"><code style="color:var(--md-code-text);font-family:monospace;font-size:0.875em;white-space:pre">`
+
       default:
-        return '';
+        return ''
     }
   }
 
   private renderCloseTag(token: Token): string {
-    return `</${token.tag}>`;
+    if (token.type === 'code_block_open') {
+      return `</code></pre>`
+    }
+    return `</${token.tag}>`
   }
 }
